@@ -11,7 +11,7 @@ all: signalrouter client client_modbus
 signalrouter: $(COMMON) src/server/signalrouter.o src/server/servercommand.o src/common/subscription.o src/server/serverevents.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
-client: $(COMMON) src/client/client.o src/client/clientcommand.o src/virtualclient.o src/common/ringbuffer.o src/client/signalhelper.o
+client_virtual: $(COMMON) src/client/client.o src/client/clientcommand.o src/virtualclient.o src/common/ringbuffer.o src/client/signalhelper.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 client_modbus: $(COMMON) src/client/client.o src/client/clientcommand.o src/mbclient.o src/mbdev.o src/common/ringbuffer.o src/client/signalhelper.o
