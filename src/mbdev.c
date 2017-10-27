@@ -14,6 +14,7 @@
 #include "mbdev.h"
 
 void mb_dev_list_init(struct mb_device_list_s *dlist) {
+  // Set everything to 0/NULL and init the mutex
   memset(dlist, 0, sizeof(struct mb_device_list_s));
   pthread_mutex_init(&dlist->mutex, NULL);
 }
@@ -22,6 +23,7 @@ int  mb_dev_add_signal(struct mb_device_list_s *dlist, struct signal_s *signal) 
   int mb_id = signal->s_register.dr_device.d_mb_id;
   int addr  = signal->s_register.dr_addr;
 
+  // Check boundaries
   if(mb_id > MAX_DEVS) {
     return -1;
   }
@@ -30,18 +32,22 @@ int  mb_dev_add_signal(struct mb_device_list_s *dlist, struct signal_s *signal) 
     return -1;
   }
 
+  // Update max device number if needed
   if(mb_id > dlist->dev_max) {
     dlist->dev_max = mb_id;
   }
 
+  // Lookup signal's register
   struct mb_device_s *device = &dlist->device[mb_id];
   struct mb_device_reg_s *reg = &device->reg[addr];
   struct mb_signal_list_s *signal_entry = malloc(sizeof(struct mb_signal_list_s));
 
+  // Update max register number
   if(addr > device->mb_reg_max) {
     device->mb_reg_max = addr;
   }
 
+  // Attach signal to the register
   signal_entry->signal = signal;
   signal_entry->next = reg->signals;
   reg->signals = signal_entry;
@@ -53,6 +59,7 @@ void mb_dev_add_write_request(struct mb_device_list_s *dlist, struct signal_s *s
   int mb_id = signal->s_register.dr_device.d_mb_id;
   int addr = signal->s_register.dr_addr;
 
+  // Check boundaries
   if(mb_id > MAX_DEVS) {
     return;
   }
@@ -61,19 +68,23 @@ void mb_dev_add_write_request(struct mb_device_list_s *dlist, struct signal_s *s
     return;
   }
 
+  // Create write request
   struct mb_device_s *device = &dlist->device[mb_id];
   struct mb_device_reg_s *reg = &device->reg[addr];
   struct mb_reg_write_request_s *req = malloc(sizeof(struct mb_reg_write_request_s));
-  req->write_mask   = 0xffff;
   req->dev_id = mb_id;
   req->reg_id = addr;
   req->reg    = reg;
+
+  // Prepare value and mask for the signal
+  req->write_mask   = 0xffff;
   req->write_value = value;
   if(signal->s_register.dr_type == 'b') {
     req->write_mask = 1 << signal->s_register.dr_bit;
     req->write_value = value ? (1 << signal->s_register.dr_bit) : 0;
   }
 
+  // Be safe, as we can read out write requests in another thread
   pthread_mutex_lock(&dlist->mutex);
   req->next   = dlist->writes;
   dlist->writes = req;
@@ -85,11 +96,14 @@ int mb_dev_update(struct mb_device_list_s *dlist) {
   int regvalue;
   struct mb_reg_write_request_s *req, *reglist = NULL;
 
+  // Be safe, as we can add write requests in another thread
   pthread_mutex_lock(&dlist->mutex);
   req = dlist->writes;
   dlist->writes = NULL;
   pthread_mutex_unlock(&dlist->mutex);
 
+  // Read out all write requests, leaving 1 per register, so we could write all signals at once
+  // if they write to a single register
   while(req) {
     int regvalue, regmask;
     struct mb_reg_write_request_s *wr = req;
@@ -109,6 +123,7 @@ int mb_dev_update(struct mb_device_list_s *dlist) {
     reg->write_mask = regmask;
   }
 
+  // Read out the list of modified registers and perform writing
   while(reglist) {
     struct mb_reg_write_request_s *wr = reglist;
     reglist = reglist->next;
@@ -121,6 +136,7 @@ int mb_dev_update(struct mb_device_list_s *dlist) {
     free(reglist);
   }
 
+  // Update registers values
   for(i = 0; i < dlist->dev_max; i ++) {
     if(dlist->device[i].mb_reg_max > 0) {
       dlist->mb_read_device(dlist, i, dlist->device[i].mb_reg_max);
@@ -133,6 +149,7 @@ int mb_dev_check_signal(struct mb_device_list_s *dlist, struct signal_s *signal)
   int addr = signal->s_register.dr_addr;
   int i, result = 0;
 
+  // Check bondaries
   if(mb_id > MAX_DEVS) {
     return -1;
   }
@@ -141,10 +158,12 @@ int mb_dev_check_signal(struct mb_device_list_s *dlist, struct signal_s *signal)
     return -1;
   }
 
+  // Select device/register the signal belongs to
   struct mb_device_s *device = &dlist->device[mb_id];
   struct mb_device_reg_s *reg = &device->reg[addr];
   int value = 0;
 
+  // Check the signal value and compare to the one stored in the register
   switch(signal->s_register.dr_type) {
   case 'i':
     if(reg->value != signal->s_value) {
@@ -161,5 +180,6 @@ int mb_dev_check_signal(struct mb_device_list_s *dlist, struct signal_s *signal)
     }
     break;
   }
+
   return result;
 }
