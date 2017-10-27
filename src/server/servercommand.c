@@ -16,7 +16,7 @@
 void process_command_read(struct execution_context_s *context, struct cmd_entry_s *command,
                           struct response_packet_header_s *h, struct response_entry_s *r, size_t bufsize) {
   struct signal_s *signals[512];
-  char signal_name[512] = {0};
+  char signal_name[128] = {0};
   int i, snum;
   struct response_signal_description_s *desc;
 
@@ -35,12 +35,12 @@ void process_command_read(struct execution_context_s *context, struct cmd_entry_
     }
 
     desc = r->re_signal_desc;
-    desc->rsd_value = signals[i]->s_value;
-    desc->rsd_rw = signals[i]->s_rw;
-    desc->rsd_reg_type = signals[i]->s_register.dr_type;
-    desc->rsd_reg_addr = signals[i]->s_register.dr_addr;
-    desc->rsd_reg_bit = signals[i]->s_register.dr_bit;
-    desc->rsd_dev_type = signals[i]->s_register.dr_device.d_type;
+    desc->rsd_value     = signals[i]->s_value;
+    desc->rsd_rw        = signals[i]->s_rw;
+    desc->rsd_reg_type  = signals[i]->s_register.dr_type;
+    desc->rsd_reg_addr  = signals[i]->s_register.dr_addr;
+    desc->rsd_reg_bit   = signals[i]->s_register.dr_bit;
+    desc->rsd_dev_type  = signals[i]->s_register.dr_device.d_type;
     desc->rsd_dev_mb_id = signals[i]->s_register.dr_device.d_mb_id;
   }
 }
@@ -48,11 +48,12 @@ void process_command_read(struct execution_context_s *context, struct cmd_entry_
 void process_command_update(struct execution_context_s *context, struct cmd_entry_s *command,
                             struct response_packet_header_s *h, struct response_entry_s *r, size_t bufsize) {
   struct signal_s *signals[512];
-  char signal_name[512] = {0};
+  char signal_name[128] = {0};
   int i, snum;
   struct response_signal_description_s *desc;
 
   memcpy(signal_name, command->ce_signal->cs_name, ntohs(command->ce_signal->cs_name_len));
+	signal_name[ntohs(command->ce_signal->cs_name_len)] = 0;
   snum = hash_find_all(context->hash, signal_name, (void**)signals, sizeof(signals) / sizeof(signals[0]));
 
   if(snum > sizeof(signals) / sizeof(signals[0])) {
@@ -204,7 +205,7 @@ int process_command(struct execution_context_s *context, int socket) {
   bytes = packet_read(socket, buffer, sizeof(buffer));
 
   if(bytes <= 0) {
-    printf("Cleaning up client subscriptions");
+    printf("Socket %d (client #%d): cleaning up client subscriptions\n", socket, context->current_client);
     for(i = 0; i < SUB_MAX; i ++) {
       struct subscription_s *s = context->subscriptions[context->current_client].sl_subscriptions[i];
       while(s) {

@@ -57,7 +57,7 @@ struct response_signal_description_s {
   uint16_t rsd_reg_bit;
   uint16_t rsd_dev_type;
   uint16_t rsd_dev_mb_id;
-};
+}__attribute__((__packed__));
 
 struct response_entry_s {
   struct cmd_signal_s *re_signal;

@@ -25,6 +25,7 @@ void parse_response(struct signal_s **signal, struct hash_s *hash, char *buffer,
     if(!response_next(&response, &n, buffer, bufSize)) {
       return;
     }
+
     int len = ntohs(response.re_signal->cs_name_len);
     memcpy(signal_name, response.re_signal->cs_name, len);
     signal_name[len] = 0;

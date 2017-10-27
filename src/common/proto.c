@@ -166,18 +166,21 @@ int packet_read(int socket, void *buffer, int bufferSize) {
   int size, bytes, dataread = 0;
 
   if(bufferSize < sizeof(struct cmd_packet_header_s)) {
+		printf("Buffer size too small\n");
     return -1;
   }
 
   bytes = recv(socket, buffer, sizeof(struct cmd_packet_header_s), 0);
 
   if(bytes <= 0) {
+		perror("Packet header read error");
     return bytes;
   }
 
   size = ntohs(hdr->cph_size);
 
   if(bufferSize < size) {
+		printf("Packet too big (%d bytes) for the buffer provided (%d bytes)\n", size, bufferSize);
     return -1;
   }
 
@@ -186,6 +189,7 @@ int packet_read(int socket, void *buffer, int bufferSize) {
   while(size > dataread) {
     bytes = recv(socket, &hdr->cph_command[dataread], size - dataread, 0);
     if(bytes < 0) {
+			perror("Packet read error");
       return -1;
     }
     dataread += bytes;

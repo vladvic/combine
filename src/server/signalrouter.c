@@ -50,6 +50,7 @@ int main(int argc, char **argv) {
     }
   }
 
+	fclose(s);
   current = signals;
 
   while(current) {

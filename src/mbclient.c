@@ -11,7 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 #ifdef MODBUS_ENABLE
-#include <modbus/modbus.h>
+#include <modbus.h>
 #endif
 #include "common/signal.h"
 #include "common/subscription.h"
@@ -55,7 +55,6 @@ int modbus_read(struct mb_device_list_s *ctx, int mbid, int max_regs) {
   }
 #else // Testing without modbus library 
   usleep(10000);
-  printf("Updating device %d\n", mbid);
   return 0;
 #endif
 }
@@ -65,21 +64,25 @@ int modbus_write(struct mb_device_list_s *ctx, int mbid, int reg, int value) {
   void *mb_ctx = ctx->mb_context;
   uint16_t regs[MAX_REG];
 
+  printf("Writing register %d:%d, %x\n", mbid, reg, value);
   if(mb_ctx != NULL) {
     modbus_set_slave(mb_ctx, mbid);
     int connected = modbus_connect(mb_ctx);
     if(connected < 0) {
+			printf("Writing modbus register failed: couldn't connect\n");
       modbus_flush(mb_ctx);
       modbus_close(mb_ctx);
       return -1;
     }
 
-    int rc = modbus_write_register(mb_ctx, reg, value); //write in device by register
+		uint16_t registers[1] = { value };
+		int rc = modbus_write_registers(mb_ctx, reg, 1, registers); //write in device by register
 
     modbus_flush(mb_ctx);
     modbus_close(mb_ctx);
 
     if(rc == -1) {
+			printf("Writing modbus register failed: write failed\n");
       return -1;
     }
 
@@ -113,7 +116,7 @@ void *create_mb_context() {
   }
 
 	modbus_set_error_recovery(ctx, 1);
-	modbus_set_debug(ctx, 1);
+	modbus_set_debug(ctx, 0);
 
   struct timeval byte_timeout;
 	struct timeval response_timeout;
@@ -126,6 +129,7 @@ void *create_mb_context() {
   byte_timeout.tv_sec = 0;
   byte_timeout.tv_usec = 30000;
   modbus_set_byte_timeout(ctx, &byte_timeout);
+	return ctx;
 #else
   return NULL;
 #endif
@@ -147,6 +151,7 @@ void client_init(struct execution_context_s *ctx) {
   s = ctx->signals;
   while(s) {
     mb_dev_add_signal(ctx->clientstate, s);
+		printf("Signal %s added\n", s->s_name);
     s = s->next;
   }
 }
@@ -156,14 +161,16 @@ void client_thread_proc(struct execution_context_s *ctx) {
   printf("Started modbus proc thread\n");
   while(ctx->running) {
     struct signal_s *s;
+		int i = 0;
     mb_dev_update(ctx->clientstate);
     s = ctx->signals;
     while(s) {
+			i ++;
       if(mb_dev_check_signal(ctx->clientstate, s) == 1) {
         post_update_command(ctx, s->s_name, s->s_value);
       }
       s = s->next;
     }
-    usleep(10000);
+    post_process(ctx);
   }
 }

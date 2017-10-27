@@ -72,6 +72,7 @@ void mb_dev_add_write_request(struct mb_device_list_s *dlist, struct signal_s *s
   struct mb_device_s *device = &dlist->device[mb_id];
   struct mb_device_reg_s *reg = &device->reg[addr];
   struct mb_reg_write_request_s *req = malloc(sizeof(struct mb_reg_write_request_s));
+
   req->dev_id = mb_id;
   req->reg_id = addr;
   req->reg    = reg;
@@ -79,6 +80,7 @@ void mb_dev_add_write_request(struct mb_device_list_s *dlist, struct signal_s *s
   // Prepare value and mask for the signal
   req->write_mask   = 0xffff;
   req->write_value = value;
+
   if(signal->s_register.dr_type == 'b') {
     req->write_mask = 1 << signal->s_register.dr_bit;
     req->write_value = value ? (1 << signal->s_register.dr_bit) : 0;
@@ -86,7 +88,7 @@ void mb_dev_add_write_request(struct mb_device_list_s *dlist, struct signal_s *s
 
   // Be safe, as we can read out write requests in another thread
   pthread_mutex_lock(&dlist->mutex);
-  req->next   = dlist->writes;
+  req->next     = dlist->writes;
   dlist->writes = req;
   pthread_mutex_unlock(&dlist->mutex);
 }
@@ -108,13 +110,14 @@ int mb_dev_update(struct mb_device_list_s *dlist) {
     int regvalue, regmask;
     struct mb_reg_write_request_s *wr = req;
     struct mb_device_reg_s *reg = wr->reg;
-    req = wr->next;
+    req = req->next;
     regmask = wr->reg->write_mask | wr->write_mask;
     regvalue = (wr->reg->write_value & ~(wr->write_mask)) | (wr->write_value & wr->write_mask);
 
     if(!wr->reg->write_mask) {
       wr->next = reglist;
       reglist = wr;
+			printf("Adding register %p (wr: %p; reglist: %p)\n", wr->reg, wr, reglist);
     } else {
       free(wr);
     }
@@ -127,13 +130,14 @@ int mb_dev_update(struct mb_device_list_s *dlist) {
   while(reglist) {
     struct mb_reg_write_request_s *wr = reglist;
     reglist = reglist->next;
+		printf("Writing register %p (wr: %p; reglist: %p)\n", wr->reg, wr, reglist);
     int regvalue = wr->reg->value;
-    regvalue = regvalue & ~wr->write_mask;
-    regvalue = regvalue | wr->write_value;
+    regvalue = regvalue & ~(wr->write_mask);
+    regvalue = regvalue | (wr->write_value);
     dlist->mb_write_device(dlist, wr->dev_id, wr->reg_id, regvalue);
     wr->reg->write_value = 0;
-    wr->reg->write_mask = 0;
-    free(reglist);
+    wr->reg->write_mask  = 0;
+    free(wr);
   }
 
   // Update registers values
