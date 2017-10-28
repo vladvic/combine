@@ -117,7 +117,6 @@ int mb_dev_update(struct mb_device_list_s *dlist) {
     if(!wr->reg->write_mask) {
       wr->next = reglist;
       reglist = wr;
-			printf("Adding register %p (wr: %p; reglist: %p)\n", wr->reg, wr, reglist);
     } else {
       free(wr);
     }
@@ -130,7 +129,6 @@ int mb_dev_update(struct mb_device_list_s *dlist) {
   while(reglist) {
     struct mb_reg_write_request_s *wr = reglist;
     reglist = reglist->next;
-		printf("Writing register %p (wr: %p; reglist: %p)\n", wr->reg, wr, reglist);
     int regvalue = wr->reg->value;
     regvalue = regvalue & ~(wr->write_mask);
     regvalue = regvalue | (wr->write_value);

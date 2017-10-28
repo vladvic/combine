@@ -10,6 +10,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <stdio.h>
 #include "proto.h"
 
 int cmd_next(struct cmd_entry_s *command, int *n, char *buffer, int bufferSize) {
