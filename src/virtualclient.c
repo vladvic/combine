@@ -17,22 +17,22 @@
 #include "client/signalhelper.h"
 
 void event_update_signal(struct signal_s *signal, int value, struct execution_context_s *ctx) {
-	static int oil_pump_started = 0;
-	printf("Updating %s\n", signal->s_name);
-	if(!strcmp(signal->s_name, "dev.485.kb.key.start_oil_pump")) {
-		if(!oil_pump_started) {
-			post_write_command(ctx, "dev.485.kb.kbl.start_oil_pump", 1);
-			post_write_command(ctx, "dev.485.kb.kbl.led_contrast", 50);
-			post_process(ctx);
-		}
-	}
-	if(!strcmp(signal->s_name, "dev.485.kb.key.stop_oil_pump")) {
-		if(!oil_pump_started) {
-			post_write_command(ctx, "dev.485.kb.kbl.start_oil_pump", 0);
-			post_write_command(ctx, "dev.485.kb.kbl.led_contrast", 0);
-			post_process(ctx);
-		}
-	}
+  static int oil_pump_started = 0;
+  printf("Updating %s\n", signal->s_name);
+  if(!strcmp(signal->s_name, "dev.485.kb.key.start_oil_pump")) {
+    if(!oil_pump_started) {
+      post_write_command(ctx, "dev.485.kb.kbl.start_oil_pump", 1);
+      post_write_command(ctx, "dev.485.kb.kbl.led_contrast", 50);
+      post_process(ctx);
+    }
+  }
+  if(!strcmp(signal->s_name, "dev.485.kb.key.stop_oil_pump")) {
+    if(!oil_pump_started) {
+      post_write_command(ctx, "dev.485.kb.kbl.start_oil_pump", 0);
+      post_write_command(ctx, "dev.485.kb.kbl.led_contrast", 0);
+      post_process(ctx);
+    }
+  }
 }
 
 void event_write_signal(struct signal_s *signal, int value, struct execution_context_s *ctx) {
@@ -40,7 +40,7 @@ void event_write_signal(struct signal_s *signal, int value, struct execution_con
   post_update_command(ctx, "dev.485.rsrs2.sound2_ledms", value);
 }
 
-void client_init(struct execution_context_s *ctx) {
+void client_init(struct execution_context_s *ctx, int argc, char **argv) {
   printf("Initializing virtual client\n");
   get_signals(&ctx->signals, ctx->hash, "dev.485", ctx->socket);
   subscribe(&ctx->signals, ctx->hash, "dev.485", ctx->socket, SUB_UPDATE);

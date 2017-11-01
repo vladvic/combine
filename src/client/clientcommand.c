@@ -201,3 +201,14 @@ void post_unsubscribe_command(struct execution_context_s *ctx, char *name, int v
   strcpy(cmd->cs_name, name);
   ring_buffer_push(ctx->command_buffer, cmd);
 }
+
+int signal_get(struct execution_context_s *ctx, char *name) {
+  struct hash_s *hash = ctx->hash;
+  struct signal_s *signal = hash_get_first(hash, name);
+
+  if(signal != NULL) {
+    return signal->s_value;
+  }
+
+  return -1;
+}

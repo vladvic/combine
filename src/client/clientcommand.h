@@ -29,4 +29,7 @@ void post_update_command(struct execution_context_s *ctx, char *name, int value)
 void post_subscribe_command(struct execution_context_s *ctx, char *name, int value);
 void post_unsubscribe_command(struct execution_context_s *ctx, char *name, int value);
 
+// Get signal value
+int signal_get(struct execution_context_s *ctx, char *name);
+
 #endif
